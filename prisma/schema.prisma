@@ -26,6 +26,7 @@ model User {
   articles    Articles[]
   comments    Comment[]
   likes       Like[]
+  projects    Project[]
   // A user can like multiple articles
 }
 
@@ -74,6 +75,6 @@ model Project {
   techStack    String
   projectImage String
   author       User     @relation(fields: [authorId], references: [id])
-  authorId     Int
+  authorId     String
   createdAt    DateTime @default(now())
 }

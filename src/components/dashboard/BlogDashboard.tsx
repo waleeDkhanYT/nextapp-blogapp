@@ -7,106 +7,120 @@ import { prisma } from "@/lib/prisma";
 import { auth } from '@clerk/nextjs/server';
 
 const BlogDashboard = async () => {
-    const { userId, redirectToSignIn } = await auth()
+    const { userId, redirectToSignIn } = await auth();
     if (!userId) return redirectToSignIn();
+
     const user = await prisma.user.findUnique({
-        where: {
-            clerkUserId: userId
-        }
+        where: { clerkUserId: userId }
     });
 
-    const [articles, totalComments] = await Promise.all([
-        // select work same as populate in mongoose
-        prisma.articles.findMany({
-            where: {
-                authorId: user?.id, // 👈 only fetch this user’s articles
-            },
-            // order by desc get latest articles first
-            // this is the same as sort in mongoose
-            orderBy: {
-                createdAt: "desc",
-            },
-            include: {
-                comments: true,
-                author: {
-                    select: {
-                        name: true,
-                        email: true,
-                        imageUrl: true,
-                    },
+    const articles = await prisma.articles.findMany({
+        where: {
+            authorId: user?.id,
+        },
+        orderBy: {
+            createdAt: "desc",
+        },
+        include: {
+            comments: true,
+            author: {
+                select: {
+                    name: true,
+                    email: true,
+                    imageUrl: true,
                 },
             },
-        }),
-        prisma.comment.count()
-    ]);
+        },
+    });
+
+    // Calculate real stats for this author
+    const totalCommentsReceived = articles.reduce((sum, art) => sum + (art.comments?.length || 0), 0);
+    const totalWords = articles.reduce((sum, art) => {
+        const text = art.content ? art.content.replace(/<[^>]*>/g, "") : "";
+        return sum + text.trim().split(/\s+/).filter(Boolean).length;
+    }, 0);
+    const avgReadingTime = articles.length > 0 ? Math.max(1, Math.round((totalWords / articles.length) / 200)) : 0;
 
     return (
-        <main className="flex-1 p-4 md:p-8">
+        <main className="w-full min-w-0 p-4 sm:p-6 lg:p-8 space-y-8">
             {/* Header */}
-            <div className="flex justify-between items-center mb-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-foreground">Blog Dashboard</h1>
-                    <p className="text-muted-foreground">Manage your content and analytics</p>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
+                        Blog Dashboard
+                    </h1>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                        Welcome back, <span className="font-semibold text-foreground">{user?.name || "Author"}</span>. Here is your publishing overview.
+                    </p>
                 </div>
-                <Link href="/dashboard/articles/create">
-                    <Button className="gap-2">
+                <Link href="/dashboard/articles/create" className="shrink-0 w-full sm:w-auto">
+                    <Button className="w-full sm:w-auto gap-2 rounded-xl text-xs sm:text-sm shadow-sm">
                         <PlusCircle className="h-4 w-4" />
                         New Article
                     </Button>
                 </Link>
             </div>
-            {/* Quick Stats */}
-            <div className="grid gap-4 md:grid-cols-3 mb-8">
-                <Card>
+
+            {/* Quick Stats Grid */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <Card className="border border-border/60 hover:border-primary/40 transition-colors shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Total Articles
+                        <CardTitle className="text-sm font-semibold text-muted-foreground">
+                            My Published Articles
                         </CardTitle>
-                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <div className="p-2 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                            <FileText className="h-4 w-4" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{articles.length}</div>
+                        <div className="text-3xl font-extrabold text-foreground">{articles.length}</div>
                         <p className="text-xs text-muted-foreground mt-1">
-                            +{articles.length} from last month
+                            {articles.length > 0 ? "Actively distributed across Next Blog" : "Draft your first piece"}
                         </p>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="border border-border/60 hover:border-primary/40 transition-colors shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Total Comments
+                        <CardTitle className="text-sm font-semibold text-muted-foreground">
+                            Comments Received
                         </CardTitle>
-                        <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                        <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                            <MessageCircle className="h-4 w-4" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{totalComments}</div>
+                        <div className="text-3xl font-extrabold text-foreground">{totalCommentsReceived}</div>
                         <p className="text-xs text-muted-foreground mt-1">
-                            +{totalComments} from last month
+                            Engagements from reader community
                         </p>
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="border border-border/60 hover:border-primary/40 transition-colors shadow-sm sm:col-span-2 lg:col-span-1">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
+                        <CardTitle className="text-sm font-semibold text-muted-foreground">
                             Avg. Reading Time
                         </CardTitle>
-                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <div className="p-2 rounded-lg bg-pink-500/10 text-pink-600 dark:text-pink-400">
+                            <Clock className="h-4 w-4" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{totalComments}</div>
+                        <div className="text-3xl font-extrabold text-foreground">
+                            {avgReadingTime} <span className="text-base font-medium text-muted-foreground">min</span>
+                        </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                            +50% from last month
+                            Estimated per published article
                         </p>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Recent Articles */}
+            {/* Recent Articles Table */}
             <RecentArticles articles={articles} />
         </main>
-    )
-}
+    );
+};
 
 export default BlogDashboard;

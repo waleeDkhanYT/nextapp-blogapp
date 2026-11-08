@@ -25,5 +25,5 @@ export const toggleLike = async (articleId: string) => {
         await prisma.like.create({ data: { articleId, userId: user.id } });
     }
 
-    revalidatePath(`/article/${articleId}`)
+    revalidatePath(`/articles/${articleId}`)
 }

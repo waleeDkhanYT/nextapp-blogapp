@@ -3,7 +3,7 @@ export type CommentFormProps = {
 }
 
 export type SearchPageProps = {
-    searchParams: { search?: string; page?: string };
+    searchParams: Promise<{ search?: string; page?: string }>;
 }
 
 export type LikeButtonProps = {

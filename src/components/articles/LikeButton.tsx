@@ -26,7 +26,7 @@ const LikeButton: React.FC<LikeButtonProps> = ({ articleId, isLiked, likes }) =>
                     className="gap-2"
                     disabled={isPending}
                 >
-                    <ThumbsUp className="h-5 w-5" color={isLiked ? "red" : "white"} fill={isLiked ? "red" : ""} />
+                    <ThumbsUp className={`h-5 w-5 transition-colors ${isLiked ? "text-red-500 fill-red-500" : "text-muted-foreground"}`} />
                     {optimisticLikes}
                 </Button>
             </form>

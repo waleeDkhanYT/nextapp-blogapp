@@ -2,10 +2,12 @@ import ArticleDetails from "@/components/articles/ArticleDetails";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 export default async function ArticleDetail({ params }: {
-    params: { id: string };
+    params: Promise<{ id: string }>;
 }) {
-    const { id } = await Promise.resolve(params); // ensures type safety
+    const { id } = await params;
 
     const article = await prisma.articles.findUnique({
         where: { id },
@@ -23,10 +25,4 @@ export default async function ArticleDetail({ params }: {
     if (!article) return notFound();
 
     return <ArticleDetails article={article} />;
-}
-
-// Optional static generation helper:
-export async function generateStaticParams() {
-    const articles = await prisma.articles.findMany({ select: { id: true } });
-    return articles.map((a) => ({ id: a.id }));
 }
